@@ -2,7 +2,6 @@ import socket
 import sys
 import time
 import threading
-import os
 
 class WebServer(object):
 
@@ -29,7 +28,6 @@ class WebServer(object):
         self.soc.listen(5)
         while True:
             (cliente, addr) = self.soc.accept()
-            cliente.settimeout(120)
             print("Cliente conectado com endereco", addr)
             threading.Thread(target=self._recebe_cliente, args=(cliente, addr)).start()
 
@@ -53,7 +51,7 @@ class WebServer(object):
         elif codigo_http == 400:
             header += 'Bad Request\r\n'
         
-        header += 'Server: {servidor}\r\n'.format('Servidor da galera')
+        header += 'Server: Servidor da galera\r\n'
         time_now = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
         header += 'Date: {data}\r\n'.format(data=time_now)
         header += 'Content-Type: text/html\r\n'
@@ -67,7 +65,6 @@ class WebServer(object):
         TAM_PACOTE = 2048
 
         while True:
-            print("Cliente conectado", cliente)
             dados = cliente.recv(TAM_PACOTE).decode() 
 
             if not dados: 
@@ -78,8 +75,8 @@ class WebServer(object):
                 break
             
             metodo_req = dados.split(' ')[0]
-            print("Metodo: ", metodo_req)
-            print("Corpo: ", dados)
+            print("Metodo:", metodo_req)
+            print("Corpo:", dados)
 
             if metodo_req == "GET" or metodo_req == "HEAD":
                 # checa versao solicitada 
@@ -106,7 +103,7 @@ class WebServer(object):
                         if metodo_req == "GET":
                             res_data = f.read()
                         f.close()
-                        tam = os.path(path_arquivo).getsize()
+                        tam = sys.getsizeof(res_data)
                         res_header = self._gera_headers(200, tam)
                     
                     # caso não haja o arquivo requisitado, responde com 404
@@ -116,12 +113,12 @@ class WebServer(object):
                             res_data = f.read()
                             f.close()
                         
-                        tam = os.path(self.dir_arquivos+"404.html").getsize()
+                        tam = sys.getsizeof(res_data)
                         res_header = self._gera_headers(404, tam)
 
                 res = res_header.encode("utf-8")
                 if metodo_req == "GET":
-                    res += res_data
+                    res += res_data.encode("utf-8")
                 
                 cliente.send(res)
                 cliente.close()
