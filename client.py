@@ -1,9 +1,24 @@
 import socket
+import sys
 
 soc = socket.socket()
-port = 10001
+port = 8080
 
-soc.connect((socket.gethostname(), port))
+data = 'GET /index.html HTTP/1.1'.encode("utf-8")
+TAM_PACOTE = 2048
 
-print (soc.recv(1024).decode("utf-8"))
+try:
+    soc.connect((socket.gethostname(), port))
+    print("Conectado com server")
+except Exception as e:
+    print(e)
+    sys.exit(1)
+
+soc.send(data)
+
+res = soc.recv(TAM_PACOTE)
+res = res.decode("utf-8")
+print(res)
 soc.close()
+print("falou")
+sys.exit(1)
