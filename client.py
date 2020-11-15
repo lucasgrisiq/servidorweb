@@ -2,9 +2,9 @@ import socket
 import sys
 
 soc = socket.socket()
-port = 8080
+port = 9999
 
-data = 'GET /index.html HTTP/1.1'.encode("utf-8")
+data = 'GET / HTTP/1.1'.encode("utf-8")
 TAM_PACOTE = 2048
 
 try:
@@ -20,5 +20,4 @@ res = soc.recv(TAM_PACOTE)
 res = res.decode("utf-8")
 print(res)
 soc.close()
-print("falou")
 sys.exit(1)

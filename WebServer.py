@@ -2,7 +2,11 @@ import socket
 import sys
 import time
 import threading
+import os
+from datetime import datetime
+import zlib
 
+#me aceita na call seus cara de cu
 class WebServer(object):
 
     def __init__(self, port=8080):
@@ -39,7 +43,7 @@ class WebServer(object):
             print(e)
             pass
 
-    def _gera_headers(self, codigo_http, content_length):
+    def _gera_headers(self, codigo_http, content_length, path = ''):
         header = 'HTTP/1.1 '
 
         if codigo_http == 200:
@@ -53,9 +57,12 @@ class WebServer(object):
         
         header += 'Server: Servidor da galera\r\n'
         time_now = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
-        header += 'Date: {data}\r\n'.format(data=time_now)
+        header += 'Date: {data} GMT-3\r\n'.format(data=time_now)
         header += 'Content-Type: text/html\r\n'
         header += 'Content-Length {tam}\r\n'.format(tam=content_length)
+        if path:
+        	header += 'Last-Modified: ' + datetime.fromtimestamp(os.path.getmtime(self.dir_arquivos + path)).strftime("%a, %B %d, %Y %I:%M:%S") + ' GMT-3\r\n'
+
         header += 'Connection: close\r\n'
         header += '\r\n'
         return header
@@ -65,11 +72,11 @@ class WebServer(object):
         TAM_PACOTE = 2048
 
         while True:
-            dados = cliente.recv(TAM_PACOTE).decode() 
+            dados = cliente.recv(TAM_PACOTE).decode()
 
             if not dados: 
                 res_header = self._gera_headers(400, 0)
-                res = res_header.encode("utf-8")
+                res = res_header.encode()
                 cliente.send(res)
                 cliente.close()
                 break
@@ -81,46 +88,37 @@ class WebServer(object):
             if metodo_req == "GET" or metodo_req == "HEAD":
                 # checa versao solicitada 
                 versao = dados.split(' ')[2]
-                if versao != "HTTP/1.1":
-                    res_header = self._gera_headers(505, 0)
+                
+                arq_solicitado = dados.split(' ')[1]
+
+                # ignora parametro, caso haja
+                arq_solicitado = arq_solicitado.split('?')[0]
+                
+                # index.html como arquivo default
+                if arq_solicitado == "/":
+                    arq_solicitado = "/index.html"
+                
+                path_arquivo = self.dir_arquivos + arq_solicitado
+
+                # tenta abrir arquivos
+                try:
+                    f = open(path_arquivo, 'rb')
+                    if metodo_req == "GET":
+                        res_data = f.read().decode()
+                    f.close()
+                    tam = sys.getsizeof(res_data)
+                    res_header = self._gera_headers(200, tam)
+                
+                # caso não haja o arquivo requisitado, responde com 404
+                except Exception as e:
+                    res_header = self._gera_headers(404, 0)
                     res_data = ''
-                
-                else:
-                    arq_solicitado = dados.split(' ')[1]
 
-                    # ignora parametro, caso haja
-                    arq_solicitado = arq_solicitado.split('?')[0]
-                    
-                    # index.html como arquivo default
-                    if arq_solicitado == "/":
-                        arq_solicitado = "/index.html"
-                    
-                    path_arquivo = self.dir_arquivos + arq_solicitado
-
-                    # tenta abrir arquivos
-                    try:
-                        f = open(path_arquivo, 'r')
-                        if metodo_req == "GET":
-                            res_data = f.read()
-                        f.close()
-                        tam = sys.getsizeof(res_data)
-                        res_header = self._gera_headers(200, tam)
-                    
-                    # caso não haja o arquivo requisitado, responde com 404
-                    except Exception as e:
-                        if metodo_req == "GET":
-                            f = open(self.dir_arquivos+"404.html", 'rb')
-                            res_data = f.read()
-                            f.close()
-                        
-                        tam = sys.getsizeof(res_data)
-                        res_header = self._gera_headers(404, tam)
-
-                res = res_header.encode("utf-8")
+                res = res_header
                 if metodo_req == "GET":
-                    res += res_data.encode("utf-8")
+                    res += res_data
                 
-                cliente.send(res)
+                cliente.send(res.encode())
                 cliente.close()
                 break
             
