@@ -8,19 +8,20 @@ import zlib
 
 class WebServer(object):
 
-    def __init__(self, port=8080, serverSize = 10):
-        self.host = socket.gethostname() #salva o nome do host
-        self.port = port #salva a porta atual
-        self.dir_arquivos = 'public' #diretorio do arquivo
-        self.serverSize = serverSize #numero maximo de clientes que podem esperar
+    def __init__(self, port = 8080, serverSize = 10):
+        self.host = socket.gethostname() # salva o nome do host
+        self.port = port # salva a porta atual
+        self.dir_arquivos = 'public' # diretorio do arquivo
+        self.serverSize = serverSize # numero maximo de clientes que podem esperar
 
     def run(self):
+        # cria o socket do server: IPv4 e TCP
         self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        try: #tenta ligar um socket ao server
+        try: # associa o socket a um endereço
             self.soc.bind((self.host, self.port))
             print("Server na porta {porta}.".format(porta=self.port))
-        except: #se nao conseguir ele desliga o server
+        except: # se nao conseguir ele desliga o server
             print("Erro: nao foi possivel conectar-se a porta {porta}".format(porta=self.port))
             self.shutdown()
             sys.exit(1)
@@ -28,13 +29,14 @@ class WebServer(object):
         self.listen()
 
     
-    def listen(self): #espera por clientes
+    def listen(self): # espera por clientes
         self.soc.listen(self.serverSize)
         while True:
             (cliente, addr) = self.soc.accept()
             print("Cliente conectado com endereco", addr)
-            #dedica uma thread para atender um cliente
-            threading.Thread(target=self.attend_cliente, args=(cliente, addr)).start()
+
+            # dedica uma thread para atender um cliente
+            threading.Thread(target=self.attend_client, args=(cliente, addr)).start()
 
     def shutdown(self):
         try:
@@ -46,6 +48,7 @@ class WebServer(object):
 
     def get_header(self, codigo_http, content_length, path = ''):
         header = 'HTTP/1.1 '
+
         #indica se ocorreu erro ou nao
         if codigo_http == 200:
             header += '200 OK\r\n'
@@ -55,21 +58,25 @@ class WebServer(object):
             header += 'HTTP Version Not Supported\r\n'
         elif codigo_http == 400:
             header += 'Bad Request\r\n'
+            
         #completa o header
         header += 'Server: Servidor da galera\r\n'
-        time_now = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
-        header += 'Date: {data} GMT-3\r\n'.format(data=time_now)
+
+        date = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+        header += 'Date: {data} GMT-3\r\n'.format(data=date)
+        
         header += 'Content-Type: text/html\r\n'
         header += 'Content-Length {tam}\r\n'.format(tam=content_length)
-        if path:
-        	header += 'Last-Modified: ' + datetime.fromtimestamp(os.path.getmtime(self.dir_arquivos + path)).strftime("%a, %B %d, %Y %I:%M:%S") + ' GMT-3\r\n'
+
+        if codigo_http == 200:
+        	header += 'Last-Modified: ' + datetime.fromtimestamp(os.path.getmtime(path)).strftime("%a, %B %d, %Y %I:%M:%S") + ' GMT-3\r\n'
 
         header += 'Connection: close\r\n'
         header += '\r\n'
         return header
 
 
-    def attend_cliente(self, cliente, addr): # recebe os dados do cliente e retorna o que foi pedido
+    def attend_client(self, cliente, addr): # recebe os dados do cliente e retorna o que foi pedido
         TAM_PACOTE = 2048
 
         while True:
@@ -108,7 +115,7 @@ class WebServer(object):
                         res_data = f.read().decode()
                     f.close()
                     tam = sys.getsizeof(res_data)
-                    res_header = self.get_header(200, tam)
+                    res_header = self.get_header(codigo_http=200, content_length=tam, path=path_arquivo)
                 
                 # caso não haja o arquivo requisitado, responde com 404
                 except Exception as e:
