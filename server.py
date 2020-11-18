@@ -4,13 +4,12 @@ import sys
 import signal
 
 def shutdownServer(sig, unused):
-    """
-    Shutsdown server from a SIGINT recieved signal
-    """
+    #Fecha o server caso receba sinal
     server.shutdown()
     sys.exit(1)
 
-signal.signal(signal.SIGINT, shutdownServer)
+if __name__ == "__main__":
+    signal.signal(signal.SIGINT, shutdownServer)
 
-server = WebServer(9999)
-server.start()
+    server = WebServer(9999)
+    server.run()
